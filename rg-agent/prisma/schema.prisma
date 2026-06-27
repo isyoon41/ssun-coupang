@@ -1,0 +1,190 @@
+// Vercel 배포를 기준으로 provider 를 postgresql 로 고정한다.
+// 로컬 개발 시에도 DATABASE_URL 에 Postgres 접속 문자열(예: Vercel Postgres/Neon)을 넣어 사용한다.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite는 Prisma enum을 지원하지 않으므로, 아래 모델들은 enum 대신 String 필드를 사용하고
+// 값의 유효성은 TypeScript 레벨(src/types/domain.ts의 union 타입)에서 보장한다.
+// ProjectStatus: draft|source_added|analyzing|analysis_done|risk_review|content_drafted|
+//   user_review|revision_requested|approved|listing_pack_ready|listed|inbound_ready|
+//   inbound_sent|live|ad_testing|scale|hold|discarded
+// OutputStatus: draft|approved|revision_requested|rejected|locked
+// RiskLevel: low|medium|high|critical
+// RecommendationGrade: A|B|C|D|E
+// SourcePlatform: domeme|coupang|smartstore|taobao|alpha1688|manual|other
+// AgentType: intake|product_analysis|risk|market_strategy|seo|creative|pricing|
+//   rocketgrowth_ops|ad_strategy|qa|packager
+
+model User {
+  id                  String           @id @default(cuid())
+  email               String           @unique
+  name                String?
+  businessName        String?
+  defaultMarginRate   Float            @default(40)
+  defaultAdBudget     Int              @default(10000)
+  defaultInboundQty   Int              @default(10)
+  preferredCategories String?
+  excludedCategories  String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  projects            ProductProject[]
+}
+
+model ProductProject {
+  id                  String                @id @default(cuid())
+  userId              String?
+  user                User?                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title               String
+  sourceUrl           String?
+  sourcePlatform      String                @default("manual")
+  rawProductName      String?
+  rawDescription      String?
+  categoryHint        String?
+  categoryCandidate   String?
+  status              String                @default("draft")
+  recommendationGrade String?
+  recommendationScore Float?
+  riskLevel           String?
+  expectedMarginRate  Float?
+  recommendedPrice    Int?
+  supplyPrice         Int?
+  domesticShippingCost Int?
+  imageUrls           String?
+  memo                String?
+
+  aiOutputs           AiOutput[]
+  pricingOutputs      PricingOutput[]
+  checklists          Checklist[]
+  approvals           Approval[]
+  listingPackages     ListingPackage[]
+
+  createdAt           DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([riskLevel])
+}
+
+model AiOutput {
+  id            String         @id @default(cuid())
+  projectId     String
+  project       ProductProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  agentType     String
+  outputType    String
+  title         String?
+  outputJson    String
+  outputText    String?
+  modelName     String?
+  promptVersion String?
+  status        String         @default("draft")
+  version       Int            @default(1)
+
+  approvals     Approval[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([projectId])
+  @@index([agentType])
+  @@index([status])
+}
+
+model PricingOutput {
+  id                    String         @id @default(cuid())
+  projectId             String
+  project               ProductProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  supplyPrice           Int            @default(0)
+  domesticShippingCost  Int            @default(0)
+  overseasShippingCost  Int            @default(0)
+  customsCost           Int            @default(0)
+  packagingCost         Int            @default(0)
+  otherCost             Int            @default(0)
+  coupangFeeRate        Float          @default(10.8)
+  fulfillmentFee        Int            @default(0)
+  storageFeeEstimate    Int            @default(0)
+  returnFeeEstimate     Int            @default(0)
+  adCostEstimate        Int            @default(10000)
+  targetMarginRate      Float          @default(40)
+
+  recommendedPrice      Int
+  minimumPrice          Int
+  adSafePrice           Int
+  expectedProfit        Int
+  expectedMarginRate    Float
+  breakevenQuantity     Int?
+  recommendedInboundQty Int?
+  totalInitialCost      Int?
+  formulaJson           String?
+
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  @@index([projectId])
+}
+
+model Checklist {
+  id              String         @id @default(cuid())
+  projectId       String
+  project         ProductProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  checklistType   String
+  title           String
+  items           String
+  completionRate  Float          @default(0)
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([projectId])
+  @@index([checklistType])
+}
+
+model Approval {
+  id         String        @id @default(cuid())
+  projectId  String
+  project    ProductProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  aiOutputId String?
+  aiOutput   AiOutput?     @relation(fields: [aiOutputId], references: [id], onDelete: SetNull)
+
+  outputType String
+  status     String
+  feedback   String?
+  approvedAt DateTime?
+
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  @@index([projectId])
+  @@index([aiOutputId])
+}
+
+model ListingPackage {
+  id              String         @id @default(cuid())
+  projectId       String
+  project         ProductProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  title           String
+  packageJson     String
+  markdownContent String?
+  htmlContent     String?
+  csvContent      String?
+  status          String         @default("generated")
+  version         Int            @default(1)
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([projectId])
+}
