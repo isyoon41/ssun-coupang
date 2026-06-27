@@ -10,73 +10,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum ProjectStatus {
-  draft
-  source_added
-  analyzing
-  analysis_done
-  risk_review
-  content_drafted
-  user_review
-  revision_requested
-  approved
-  listing_pack_ready
-  listed
-  inbound_ready
-  inbound_sent
-  live
-  ad_testing
-  scale
-  hold
-  discarded
-}
-
-enum OutputStatus {
-  draft
-  approved
-  revision_requested
-  rejected
-  locked
-}
-
-enum RiskLevel {
-  low
-  medium
-  high
-  critical
-}
-
-enum RecommendationGrade {
-  A
-  B
-  C
-  D
-  E
-}
-
-enum SourcePlatform {
-  domeme
-  coupang
-  smartstore
-  taobao
-  alpha1688
-  manual
-  other
-}
-
-enum AgentType {
-  intake
-  product_analysis
-  risk
-  market_strategy
-  seo
-  creative
-  pricing
-  rocketgrowth_ops
-  ad_strategy
-  qa
-  packager
-}
+// SQLite는 Prisma enum을 지원하지 않으므로, 아래 모델들은 enum 대신 String 필드를 사용하고
+// 값의 유효성은 TypeScript 레벨(src/types/domain.ts의 union 타입)에서 보장한다.
+// ProjectStatus: draft|source_added|analyzing|analysis_done|risk_review|content_drafted|
+//   user_review|revision_requested|approved|listing_pack_ready|listed|inbound_ready|
+//   inbound_sent|live|ad_testing|scale|hold|discarded
+// OutputStatus: draft|approved|revision_requested|rejected|locked
+// RiskLevel: low|medium|high|critical
+// RecommendationGrade: A|B|C|D|E
+// SourcePlatform: domeme|coupang|smartstore|taobao|alpha1688|manual|other
+// AgentType: intake|product_analysis|risk|market_strategy|seo|creative|pricing|
+//   rocketgrowth_ops|ad_strategy|qa|packager
 
 model User {
   id                  String           @id @default(cuid())
@@ -101,15 +45,15 @@ model ProductProject {
 
   title               String
   sourceUrl           String?
-  sourcePlatform      SourcePlatform        @default(manual)
+  sourcePlatform      String                @default("manual")
   rawProductName      String?
   rawDescription      String?
   categoryHint        String?
   categoryCandidate   String?
-  status              ProjectStatus         @default(draft)
-  recommendationGrade RecommendationGrade?
+  status              String                @default("draft")
+  recommendationGrade String?
   recommendationScore Float?
-  riskLevel           RiskLevel?
+  riskLevel           String?
   expectedMarginRate  Float?
   recommendedPrice    Int?
   supplyPrice         Int?
@@ -136,14 +80,14 @@ model AiOutput {
   projectId     String
   project       ProductProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  agentType     AgentType
+  agentType     String
   outputType    String
   title         String?
   outputJson    String
   outputText    String?
   modelName     String?
   promptVersion String?
-  status        OutputStatus   @default(draft)
+  status        String         @default("draft")
   version       Int            @default(1)
 
   approvals     Approval[]
@@ -216,7 +160,7 @@ model Approval {
   aiOutput   AiOutput?     @relation(fields: [aiOutputId], references: [id], onDelete: SetNull)
 
   outputType String
-  status     OutputStatus
+  status     String
   feedback   String?
   approvedAt DateTime?
 

@@ -37,14 +37,16 @@ npm run dev
 
 브라우저에서 http://localhost:3000 으로 접속합니다.
 
-### ⚠️ 샌드박스/오프라인 환경에서의 알려진 제약
+### 검증 완료
 
-이 환경(에이전트 빌드 샌드박스)에서는 `prisma generate`/`npm install` 과정에서 Prisma 엔진 바이너리를
-`binaries.prisma.sh`에서 내려받는 과정이 네트워크 정책에 의해 차단되어(`ECONNRESET`) Prisma Client가
-생성되지 않았습니다. 이로 인해 이 환경에서는 `npm run build`와 전체 `tsc` 타입 체크를 끝까지 통과시키지
-못했습니다(`@prisma/client`의 `PrismaClient`/`Prisma` export가 비어 있어 발생하는 타입 오류만 존재하며,
-실제 네트워크가 열린 개발 환경에서 `npx prisma generate`(또는 `npm install`)를 정상적으로 실행하면
-모두 해소됩니다). 일반 개발 머신/CI에서는 네트워크 제약이 없으므로 위 설치 순서를 그대로 따르면 됩니다.
+`npm install`(필요 시 `--ignore-scripts` 후 엔진 바이너리 수동 배치) → `npx prisma generate` →
+`npx prisma db push` → `npx tsx prisma/seed.ts` → `npm run dev` 순으로 실행해 다음 골든패스를
+실제로 end-to-end 확인했습니다: 프로젝트 생성 → AI 분석 실행(11개 Agent) → 산출물 승인 →
+등록 패키지 생성 → Markdown/HTML/CSV/JSON 4종 다운로드. `npx tsc --noEmit`도 에러 없이 통과합니다.
+
+참고: SQLite는 Prisma `enum`을 지원하지 않으므로, `prisma/schema.prisma`의 상태/타입 필드들은
+`String`으로 정의하고 유효 값 검증은 `src/types/domain.ts`의 TypeScript union 타입에서 담당합니다
+(PostgreSQL로 전환 시에도 그대로 동작하며, 필요하면 그때 enum으로 다시 바꿀 수 있습니다).
 
 ## 디렉터리 구조
 
