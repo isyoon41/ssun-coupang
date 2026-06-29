@@ -54,7 +54,7 @@ export async function saveAiOutput(
       outputType: opts?.outputType ?? agentType,
       title: opts?.title,
       outputJson: JSON.stringify(outputJson),
-      modelName: 'mock-provider-v1',
+      modelName: process.env.AI_PROVIDER === 'google' ? (process.env.GOOGLE_AI_MODEL ?? 'gemini-2.0-flash') : 'mock-provider-v1',
       promptVersion: 'v1.0',
       status: 'draft',
     },
