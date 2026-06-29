@@ -327,11 +327,4 @@ export class MockAiProvider implements AiProvider {
   }
 }
 
-// TODO(v1.1): 실제 Provider 로 교체 가능한 확장 포인트.
-// export class OpenAiProvider implements AiProvider { ... }
-// export class AnthropicProvider implements AiProvider { ... }
-
-export function getAiProvider(): AiProvider {
-  // AI_PROVIDER 환경변수로 추후 실제 provider 교체 가능하도록 분기점만 남겨둔다.
-  return new MockAiProvider();
-}
+// 실제 Provider(GoogleAiProvider 등) 선택은 get-provider.ts의 getAiProvider()에서 처리한다.
